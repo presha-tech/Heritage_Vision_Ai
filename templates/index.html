@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>Heritage Vision AI — Indian Monument Recognition</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--ochre:#C8843A;
+--deep:#FFFFFF;
+--stone:#EDE4D4;
+--sand:rgba(255,255,255,0.08);
+--rust:#D17C3D;
+--muted:#F2F2F2;
+--border:rgba(255,255,255,0.2);
+}
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+html,body{
+
+height:100%;
+min-height:100%;
+
+background:
+linear-gradient(
+rgba(0,0,0,0.50),
+rgba(0,0,0,0.50)
+),
+url("{{ url_for('static', filename='taj.jpeg') }}");
+
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
+background-attachment:fixed;
+
+font-family:'DM Sans',sans-serif;
+
+color:white;
+
+}
+
+/* ARCHES */
+
+.arch-bg{
+
+position:fixed;
+
+bottom:-80px;
+right:-80px;
+
+width:420px;
+height:420px;
+
+border-radius:50%;
+
+border:80px solid rgba(255,255,255,0.04);
+
+pointer-events:none;
+
+z-index:0;
+
+}
+
+.arch-bg2{
+
+position:fixed;
+
+top:-100px;
+left:-100px;
+
+width:350px;
+height:350px;
+
+border-radius:50%;
+
+border:60px solid rgba(255,255,255,0.03);
+
+pointer-events:none;
+
+z-index:0;
+
+}
+
+.page{
+
+position:relative;
+
+z-index:1;
+
+min-height:100vh;
+
+display:grid;
+
+grid-template-rows:auto 1fr auto;
+
+}
+
+/* HEADER */
+
+header{
+
+padding:28px 48px;
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+border-bottom:1px solid var(--border);
+
+}
+
+.logo{
+
+display:flex;
+
+align-items:center;
+
+gap:12px;
+
+}
+
+.logo-icon{
+
+width:36px;
+
+height:36px;
+
+background:var(--ochre);
+
+border-radius:8px;
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+font-size:18px;
+
+}
+
+.logo-text{
+
+font-family:'Cormorant Garamond',serif;
+
+font-size:1.3rem;
+
+font-weight:600;
+
+color:white;
+
+}
+
+.logo-sub{
+
+font-size:.65rem;
+
+letter-spacing:.12em;
+
+text-transform:uppercase;
+
+color:white;
+
+display:block;
+
+}
+
+nav{
+
+display:flex;
+
+gap:10px;
+
+}
+
+.badge{
+
+padding:5px 12px;
+
+border-radius:20px;
+
+border:1px solid var(--border);
+
+background:rgba(255,255,255,0.08);
+
+color:white;
+
+font-size:.7rem;
+
+backdrop-filter:blur(6px);
+
+}
+
+.badge-filled{
+
+background:var(--ochre);
+
+}
+
+/* HERO */
+
+.hero{
+
+display:flex;
+
+flex-direction:column;
+
+justify-content:center;
+
+align-items:center;
+
+padding:60px 24px 80px;
+
+text-align:center;
+
+}
+
+.eyebrow{
+
+font-size:.75rem;
+
+letter-spacing:.2em;
+
+text-transform:uppercase;
+
+margin-bottom:20px;
+
+color:#FFD6A0;
+
+}
+
+h1{
+
+font-family:'Cormorant Garamond',serif;
+
+font-size:clamp(3rem,7vw,5.5rem);
+
+font-weight:300;
+
+line-height:1.1;
+
+margin-bottom:15px;
+
+color:white;
+
+}
+
+h1 em{
+
+font-style:italic;
+
+color:#FFD6A0;
+
+}
+
+.subtitle{
+
+max-width:540px;
+
+line-height:1.8;
+
+margin-bottom:50px;
+
+color:#EEEEEE;
+
+}
+
+/* CARD */
+
+.upload-card{
+
+width:100%;
+
+max-width:560px;
+
+padding:45px;
+
+border-radius:22px;
+
+background:rgba(255,255,255,0.12);
+
+backdrop-filter:blur(18px);
+
+border:1px solid rgba(255,255,255,.15);
+
+box-shadow:
+
+0 10px 35px rgba(0,0,0,.28);
+
+}
+
+/* DROPZONE */
+
+.drop-zone{
+
+padding:42px 24px;
+
+border:2px dashed rgba(255,255,255,.25);
+
+border-radius:14px;
+
+cursor:pointer;
+
+position:relative;
+
+background:rgba(255,255,255,.06);
+
+margin-bottom:22px;
+
+transition:.2s;
+
+}
+
+.drop-zone:hover{
+
+border-color:#FFD6A0;
+
+background:rgba(255,255,255,.09);
+
+}
+
+.drop-zone.dragover{
+
+border-color:#FFD6A0;
+
+}
+
+.drop-zone input{
+
+position:absolute;
+
+inset:0;
+
+opacity:0;
+
+cursor:pointer;
+
+}
+
+.drop-icon{
+
+font-size:2rem;
+
+display:block;
+
+margin-bottom:12px;
+
+}
+
+.drop-title{
+
+font-size:1.2rem;
+
+font-family:'Cormorant Garamond',serif;
+
+margin-bottom:6px;
+
+color:white;
+
+}
+
+.drop-hint{
+
+color:#EEEEEE;
+
+font-size:.85rem;
+
+}
+
+/* PREVIEW */
+
+#preview-container{
+
+display:none;
+
+margin-bottom:20px;
+
+border-radius:14px;
+
+overflow:hidden;
+
+position:relative;
+
+}
+
+#preview-container img{
+
+width:100%;
+
+max-height:240px;
+
+object-fit:cover;
+
+display:block;
+
+}
+
+.preview-label{
+
+position:absolute;
+
+bottom:10px;
+
+left:10px;
+
+background:rgba(0,0,0,.65);
+
+padding:5px 10px;
+
+border-radius:18px;
+
+font-size:.75rem;
+
+}
+
+.preview-remove{
+
+position:absolute;
+
+top:10px;
+
+right:10px;
+
+width:30px;
+
+height:30px;
+
+border:none;
+
+border-radius:50%;
+
+background:rgba(0,0,0,.6);
+
+color:white;
+
+cursor:pointer;
+
+}
+
+/* BUTTON */
+
+.btn-analyse{
+
+width:100%;
+
+padding:16px;
+
+border:none;
+
+border-radius:12px;
+
+background:var(--ochre);
+
+color:white;
+
+font-weight:600;
+
+cursor:pointer;
+
+transition:.2s;
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+gap:10px;
+
+}
+
+.btn-analyse:hover{
+
+background:#DA8A42;
+
+}
+
+.btn-analyse:disabled{
+
+opacity:.55;
+
+cursor:not-allowed;
+
+}
+
+.spinner{
+
+display:none;
+
+width:18px;
+
+height:18px;
+
+border:2px solid rgba(255,255,255,.3);
+
+border-top:white 2px solid;
+
+border-radius:50%;
+
+animation:spin .7s linear infinite;
+
+}
+
+@keyframes spin{
+
+to{
+
+transform:rotate(360deg);
+
+}
+
+}
+
+/* MONUMENTS */
+
+.monuments-strip{
+
+margin-top:55px;
+
+}
+
+.strip-label{
+
+margin-bottom:18px;
+
+letter-spacing:.2em;
+
+font-size:.7rem;
+
+color:white;
+
+}
+
+.monument-tags{
+
+display:flex;
+
+flex-wrap:wrap;
+
+justify-content:center;
+
+gap:10px;
+
+}
+
+.monument-tag{
+
+padding:8px 16px;
+
+border-radius:20px;
+
+background:rgba(255,255,255,.12);
+
+border:1px solid rgba(255,255,255,.15);
+
+backdrop-filter:blur(10px);
+
+}
+
+/* FOOTER */
+
+footer{
+
+padding:22px 48px;
+
+display:flex;
+
+justify-content:space-between;
+
+border-top:1px solid rgba(255,255,255,.15);
+
+color:white;
+
+font-size:.75rem;
+
+}
+
+.footer-right{
+
+display:flex;
+
+gap:20px;
+
+}
+
+@media(max-width:640px){
+
+header{
+
+padding:20px;
+
+}
+
+nav{
+
+display:none;
+
+}
+
+.upload-card{
+
+padding:28px 20px;
+
+}
+
+footer{
+
+padding:20px;
+
+flex-direction:column;
+
+gap:8px;
+
+text-align:center;
+
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="arch-bg"></div>
+<div class="arch-bg2"></div>
+
+<div class="page">
+
+<header>
+
+<div class="logo">
+
+<div class="logo-icon">🏛</div>
+
+<div>
+
+<span class="logo-text">Heritage Vision</span>
+
+<span class="logo-sub">AI Recognition</span>
+
+</div>
+
+</div>
+
+<nav>
+
+<span class="badge">ResNet50</span>
+
+<span class="badge badge-filled">5 Monuments</span>
+
+</nav>
+
+</header>
+
+<main class="hero">
+
+<p class="eyebrow">
+AI-powered · Transfer Learning · Instant Results
+</p>
+
+<h1>
+Identify India's <em>iconic</em><br>
+monuments
+</h1>
+
+<p class="subtitle">
+Upload a photograph and our ResNet50 model will identify the monument and surface its history, dynasty and cultural significance.
+</p>
+
+<form
+class="upload-card"
+action="/predict"
+method="POST"
+enctype="multipart/form-data"
+id="upload-form">
+
+<div id="preview-container">
+
+<img id="preview-img">
+
+<span class="preview-label">
+Ready to analyse
+</span>
+
+<button
+type="button"
+class="preview-remove"
+id="remove-btn">
+✕
+</button>
+
+</div>
+
+<div class="drop-zone" id="drop-zone">
+
+<input
+type="file"
+name="image"
+id="file-input"
+accept="image/*"
+required>
+
+<span class="drop-icon">
+🖼
+</span>
+
+<p class="drop-title">
+Drop your image here
+</p>
+
+<p class="drop-hint">
+or click to browse · JPG PNG WEBP
+</p>
+
+</div>
+
+<button
+class="btn-analyse"
+type="submit"
+id="submit-btn"
+disabled>
+
+<span
+class="spinner"
+id="spinner">
+</span>
+
+<span id="btn-text">
+Select an image to analyse
+</span>
+
+</button>
+
+</form>
+
+<div class="monuments-strip">
+
+<p class="strip-label">
+SUPPORTED MONUMENTS
+</p>
+
+<div class="monument-tags">
+
+<span class="monument-tag">
+🕌 Taj Mahal
+</span>
+
+<span class="monument-tag">
+🕍 Charminar
+</span>
+
+<span class="monument-tag">
+⛩ Gateway of India
+</span>
+
+<span class="monument-tag">
+🗼 Qutub Minar
+</span>
+
+<span class="monument-tag">
+☀️ Sun Temple Konark
+</span>
+
+</div>
+
+</div>
+
+</main>
+
+<footer>
+
+<span>
+Heritage Vision AI · Built with TensorFlow & Flask
+</span>
+
+<div class="footer-right">
+
+<span>
+ResNet50 Transfer Learning
+</span>
+
+<span>
+SQLite Knowledge Base
+</span>
+
+</div>
+
+</footer>
+
+</div>
+
+<script>
+
+const fileInput=document.getElementById('file-input');
+const dropZone=document.getElementById('drop-zone');
+const previewCon=document.getElementById('preview-container');
+const previewImg=document.getElementById('preview-img');
+const removeBtn=document.getElementById('remove-btn');
+const submitBtn=document.getElementById('submit-btn');
+const btnText=document.getElementById('btn-text');
+const spinner=document.getElementById('spinner');
+const form=document.getElementById('upload-form');
+
+function showPreview(file){
+
+if(!file)return;
+
+const url=URL.createObjectURL(file);
+
+previewImg.src=url;
+
+previewCon.style.display='block';
+
+dropZone.style.display='none';
+
+submitBtn.disabled=false;
+
+btnText.textContent='Analyse Monument';
+
+}
+
+function resetUpload(){
+
+previewCon.style.display='none';
+
+dropZone.style.display='block';
+
+fileInput.value='';
+
+submitBtn.disabled=true;
+
+btnText.textContent='Select an image to analyse';
+
+}
+
+fileInput.addEventListener('change',()=>{
+
+if(fileInput.files[0])
+showPreview(fileInput.files[0]);
+
+});
+
+removeBtn.addEventListener(
+'click',
+resetUpload
+);
+
+['dragover','dragenter']
+.forEach(event=>{
+
+dropZone.addEventListener(
+event,
+e=>{
+
+e.preventDefault();
+
+dropZone.classList.add('dragover');
+
+});
+
+});
+
+['drop','dragleave']
+.forEach(event=>{
+
+dropZone.addEventListener(
+event,
+e=>{
+
+e.preventDefault();
+
+dropZone.classList.remove('dragover');
+
+});
+
+});
+
+dropZone.addEventListener(
+'drop',
+e=>{
+
+const file=e.dataTransfer.files[0];
+
+if(file){
+
+fileInput.files=e.dataTransfer.files;
+
+showPreview(file);
+
+}
+
+});
+
+form.addEventListener(
+'submit',
+()=>{
+
+submitBtn.disabled=true;
+
+spinner.style.display='block';
+
+btnText.textContent='Analysing...';
+
+});
+
+</script>
+
+</body>
+</html>

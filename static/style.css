@@ -1,0 +1,336 @@
+body{
+    margin:0;
+    padding:0;
+    font-family: Georgia, serif;
+    background:#f7f1e7;
+    color:#5b1f1f;
+}
+
+/* =========================
+   NAVBAR
+========================= */
+
+.navbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 50px;
+    border-bottom:1px solid #d6c3a5;
+    background:#f7f1e7;
+}
+
+.logo{
+    font-size:28px;
+    font-weight:bold;
+}
+
+.nav-btn{
+    background:#c46a1c;
+    color:white;
+    padding:12px 24px;
+    border-radius:30px;
+    font-weight:bold;
+}
+
+/* =========================
+   HERO SECTION
+========================= */
+
+.hero{
+    text-align:center;
+    padding:60px 20px;
+}
+
+.hero h1{
+    font-size:72px;
+    margin-bottom:20px;
+    color:#5b1f1f;
+    line-height:1.1;
+}
+
+.hero span{
+    color:#d37a2a;
+}
+
+.hero p{
+    font-size:24px;
+    color:#8a6f5a;
+    max-width:900px;
+    margin:auto;
+    line-height:1.8;
+}
+
+/* =========================
+   UPLOAD SECTION
+========================= */
+
+.upload-section{
+    display:flex;
+    justify-content:center;
+    margin-top:50px;
+    margin-bottom:80px;
+}
+
+.upload-box{
+    width:700px;
+    background:#efe5d6;
+    border:2px dashed #c8a97e;
+    border-radius:25px;
+    padding:80px;
+    text-align:center;
+    box-shadow:0px 5px 20px rgba(0,0,0,0.08);
+}
+
+.icon{
+    font-size:80px;
+    margin-bottom:20px;
+}
+
+.upload-box h2{
+    font-size:36px;
+    margin-bottom:10px;
+}
+
+.upload-box p{
+    color:#8a6f5a;
+    margin-bottom:30px;
+    font-size:18px;
+}
+
+input[type="file"]{
+    margin-bottom:30px;
+    font-size:16px;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+button{
+    background:#d37a2a;
+    color:white;
+    border:none;
+    padding:18px 40px;
+    border-radius:40px;
+    font-size:20px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:0.3s;
+}
+
+button:hover{
+    opacity:0.92;
+    transform:scale(1.03);
+}
+
+/* =========================
+   RESULT PAGE
+========================= */
+
+.result-container{
+    padding:50px 20px;
+    text-align:center;
+}
+
+.result-container h1{
+    font-size:46px;
+    margin-bottom:40px;
+}
+
+/* =========================
+   TOP RESULT SECTION
+========================= */
+
+.top-result-section{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:40px;
+    flex-wrap:wrap;
+    margin-bottom:70px;
+}
+
+/* =========================
+   IMAGE
+========================= */
+
+.image-box{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.result-image{
+    width:450px;
+    max-width:100%;
+    border-radius:20px;
+    box-shadow:0px 5px 20px rgba(0,0,0,0.2);
+}
+
+/* =========================
+   RESULT CARD
+========================= */
+
+.result-card{
+    background:white;
+    padding:40px;
+    border-radius:20px;
+    box-shadow:0px 5px 20px rgba(0,0,0,0.1);
+
+    min-width:280px;
+    min-height:220px;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+}
+
+.result-card h2{
+    font-size:42px;
+    color:#5b1f1f;
+    margin-bottom:15px;
+}
+
+.result-card p{
+    font-size:22px;
+    color:#8a6f5a;
+    margin-bottom:10px;
+}
+
+.confidence{
+    font-size:52px;
+    color:#d37a2a;
+    font-weight:bold;
+}
+
+/* =========================
+   HISTORICAL INFO SECTION
+========================= */
+
+.info-section{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin-top:20px;
+}
+
+.info-section h2{
+    font-size:42px;
+    color:#5b1f1f;
+    margin-bottom:30px;
+}
+
+.info-card{
+    width:80%;
+    max-width:950px;
+
+    background:white;
+
+    padding:45px;
+
+    border-radius:25px;
+
+    box-shadow:0px 5px 20px rgba(0,0,0,0.1);
+
+    text-align:left;
+
+    line-height:1.9;
+}
+
+.info-card p{
+    font-size:20px;
+    color:#5c4a3d;
+    margin-bottom:30px;
+}
+
+.info-card strong{
+    color:#a14d12;
+    font-size:22px;
+}
+
+/* =========================
+   BACK BUTTON
+========================= */
+
+.back-btn{
+    margin-top:45px;
+    margin-bottom:60px;
+}
+
+/* =========================
+   RESPONSIVE DESIGN
+========================= */
+
+@media(max-width:768px){
+
+    .navbar{
+        padding:15px 20px;
+    }
+
+    .logo{
+        font-size:22px;
+    }
+
+    .nav-btn{
+        font-size:14px;
+        padding:10px 18px;
+    }
+
+    .hero h1{
+        font-size:48px;
+    }
+
+    .hero p{
+        font-size:20px;
+        padding:0 20px;
+    }
+
+    .upload-box{
+        width:85%;
+        padding:40px;
+    }
+
+    .top-result-section{
+        flex-direction:column;
+        gap:30px;
+    }
+
+    .result-image{
+        width:90%;
+    }
+
+    .result-card{
+        width:85%;
+        min-width:auto;
+    }
+
+    .result-card h2{
+        font-size:34px;
+    }
+
+    .result-card p{
+        font-size:20px;
+    }
+
+    .confidence{
+        font-size:42px;
+    }
+
+    .info-section h2{
+        font-size:34px;
+    }
+
+    .info-card{
+        width:90%;
+        padding:25px;
+    }
+
+    .info-card p{
+        font-size:18px;
+    }
+
+    .info-card strong{
+        font-size:20px;
+    }
+}

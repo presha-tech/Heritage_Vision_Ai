@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.python-version
+.ipynb_checkpoints/
+static/uploads/
+
+*.log
