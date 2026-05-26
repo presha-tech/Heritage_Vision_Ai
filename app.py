@@ -69,24 +69,6 @@ _model = load_model(MODEL_PATH)
 
 print("STEP 2 COMPLETE: Model loaded")
 
-# Warm up model once
-
-print("STEP 2.5: Warmup inference")
-
-_dummy = np.zeros(
-    (1,224,224,3),
-    dtype=np.float32
-)
-
-_dummy = preprocess_input(_dummy)
-
-_ = _model(
-    _dummy,
-    training=False
-)
-
-print("STEP 2.5 COMPLETE")
-
 # ─────────────────────────────────────────────────────────────
 # LABELS
 # ─────────────────────────────────────────────────────────────
