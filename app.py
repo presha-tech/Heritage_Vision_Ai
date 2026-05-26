@@ -3,26 +3,17 @@
 import os
 import sqlite3
 
-# ─────────────────────────────────────────────────────────────
-# TENSORFLOW ENV LIMITS
-# MUST BE BEFORE TENSORFLOW IMPORT
-# ─────────────────────────────────────────────────────────────
-
+# TensorFlow environment limits
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
 os.environ["TF_NUM_INTEROP_THREADS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
-# ─────────────────────────────────────────────────────────────
-# TENSORFLOW IMPORT
-# ─────────────────────────────────────────────────────────────
 
 print("STEP 0: Importing TensorFlow...")
 
 import numpy as np
 import tensorflow as tf
 
-from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.applications.resnet50 import preprocess_input
 
@@ -31,20 +22,14 @@ from flask import Flask, render_template, request
 
 print("STEP 0 COMPLETE: TensorFlow imported")
 
-# Extra thread limiting
-
 tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
 
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
 # APP
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
 
 app = Flask(__name__)
-
-# ─────────────────────────────────────────────────────────────
-# UPLOADS
-# ─────────────────────────────────────────────────────────────
 
 UPLOAD_FOLDER = "static/uploads"
 
@@ -57,9 +42,10 @@ os.makedirs(
 
 print("STEP 1: Upload folder ready")
 
-# ─────────────────────────────────────────────────────────────
-# MODEL
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
+# LOAD TFLITE MODEL
+# ─────────────────────────────────────────────────
+
 print("Loading TFLite model...")
 
 interpreter = tf.lite.Interpreter(
@@ -73,9 +59,10 @@ input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
 print("TFLite ready.")
-# ─────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────
 # LABELS
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
 
 CLASS_NAMES = [
 
@@ -93,9 +80,9 @@ CLASS_NAMES = [
 
 print("STEP 3: Labels loaded")
 
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
 # PREDICTION
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
 
 def predict_monument(filepath):
 
@@ -118,18 +105,13 @@ def predict_monument(filepath):
         img
     )
 
-    print(
-        "STEP P3: Expanding",
-        flush=True
-    )
-
     arr = np.expand_dims(
         arr,
         axis=0
     )
 
     print(
-        "STEP P4: Preprocessing",
+        "STEP P3: Preprocessing",
         flush=True
     )
 
@@ -137,18 +119,33 @@ def predict_monument(filepath):
         arr
     )
 
+    arr = arr.astype(
+        np.float32
+    )
+
     print(
-        "STEP P5: Running inference",
+        "STEP P4: TFLite inference",
         flush=True
     )
 
-    preds = _model(
-        arr,
-        training=False
-    ).numpy()
+    interpreter.set_tensor(
+
+        input_details[0]["index"],
+
+        arr
+
+    )
+
+    interpreter.invoke()
+
+    preds = interpreter.get_tensor(
+
+        output_details[0]["index"]
+
+    )
 
     print(
-        "STEP P6: Inference complete",
+        "STEP P5: Inference complete",
         flush=True
     )
 
@@ -163,52 +160,34 @@ def predict_monument(filepath):
     monument = CLASS_NAMES[idx]
 
     print(
-        f"STEP P7: {monument} {confidence:.2f}",
+        f"PREDICTED: {monument}",
         flush=True
     )
 
     return monument,confidence
 
-# ─────────────────────────────────────────────────────────────
-# HOME
-# ─────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────
+# ROUTES
+# ─────────────────────────────────────────────────
 
 @app.route("/")
 def home():
-
-    print(
-        "HOME PAGE OPENED",
-        flush=True
-    )
 
     return render_template(
         "index.html"
     )
 
-# ─────────────────────────────────────────────────────────────
-# PREDICT
-# ─────────────────────────────────────────────────────────────
 
 @app.route(
     "/predict",
     methods=["POST"]
 )
-
 def predict():
-
-    print(
-        "STEP 4: Predict route entered",
-        flush=True
-    )
 
     try:
 
         if "image" not in request.files:
-
-            print(
-                "NO IMAGE",
-                flush=True
-            )
 
             return render_template(
                 "index.html",
@@ -217,12 +196,7 @@ def predict():
 
         file = request.files["image"]
 
-        print(
-            "STEP 5: Image received",
-            flush=True
-        )
-
-        if file.filename == "":
+        if file.filename=="":
 
             return render_template(
                 "index.html",
@@ -234,38 +208,24 @@ def predict():
         )
 
         filepath = os.path.join(
-            app.config["UPLOAD_FOLDER"],
-            filename
-        )
 
-        print(
-            f"STEP 6: Saving {filepath}",
-            flush=True
+            app.config["UPLOAD_FOLDER"],
+
+            filename
+
         )
 
         file.save(filepath)
 
-        print(
-            "STEP 7: File saved",
-            flush=True
-        )
-
         monument,confidence = \
         predict_monument(filepath)
 
-        print(
-            "STEP 8: Prediction done",
-            flush=True
-        )
-
         db_path = os.path.join(
-            os.path.dirname(__file__),
-            "monuments.db"
-        )
 
-        print(
-            "STEP 9: DB open",
-            flush=True
+            os.path.dirname(__file__),
+
+            "monuments.db"
+
         )
 
         conn = sqlite3.connect(
@@ -297,12 +257,7 @@ def predict():
 
         conn.close()
 
-        print(
-            "STEP 10: DB fetched",
-            flush=True
-        )
-
-        NA = "Information not available."
+        NA="Information not available."
 
         history,\
         dynasty,\
@@ -319,11 +274,6 @@ def predict():
 
         (NA,NA,NA,NA,NA,NA)
 
-        )
-
-        print(
-            "STEP 11: Rendering",
-            flush=True
         )
 
         return render_template(
@@ -353,23 +303,27 @@ def predict():
     except Exception as e:
 
         print(
-            f"ERROR: {str(e)}",
+            str(e),
             flush=True
         )
 
         return str(e),500
 
-# ─────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────
 # ENTRY
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
 
 if __name__=="__main__":
 
     port = int(
 
         os.environ.get(
+
             "PORT",
+
             5000
+
         )
 
     )
