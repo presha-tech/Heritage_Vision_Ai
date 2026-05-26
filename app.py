@@ -4,8 +4,19 @@ import os
 import sqlite3
 
 # ─────────────────────────────────────────────────────────────
-# TENSORFLOW
+# TENSORFLOW ENV LIMITS
+# MUST BE BEFORE TENSORFLOW IMPORT
 # ─────────────────────────────────────────────────────────────
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
+os.environ["TF_NUM_INTEROP_THREADS"] = "1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+# ─────────────────────────────────────────────────────────────
+# TENSORFLOW IMPORT
+# ─────────────────────────────────────────────────────────────
+
 print("STEP 0: Importing TensorFlow...")
 
 import numpy as np
@@ -20,18 +31,21 @@ from flask import Flask, render_template, request
 
 print("STEP 0 COMPLETE: TensorFlow imported")
 
-# Reduce memory pressure a bit
+# Extra thread limiting
+
 tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
 
 # ─────────────────────────────────────────────────────────────
 # APP
 # ─────────────────────────────────────────────────────────────
+
 app = Flask(__name__)
 
 # ─────────────────────────────────────────────────────────────
 # UPLOADS
 # ─────────────────────────────────────────────────────────────
+
 UPLOAD_FOLDER = "static/uploads"
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -46,6 +60,7 @@ print("STEP 1: Upload folder ready")
 # ─────────────────────────────────────────────────────────────
 # MODEL
 # ─────────────────────────────────────────────────────────────
+
 MODEL_PATH = "model/best_resnet_model.h5"
 
 print("STEP 2: Loading model...")
@@ -54,9 +69,28 @@ _model = load_model(MODEL_PATH)
 
 print("STEP 2 COMPLETE: Model loaded")
 
+# Warm up model once
+
+print("STEP 2.5: Warmup inference")
+
+_dummy = np.zeros(
+    (1,224,224,3),
+    dtype=np.float32
+)
+
+_dummy = preprocess_input(_dummy)
+
+_ = _model(
+    _dummy,
+    training=False
+)
+
+print("STEP 2.5 COMPLETE")
+
 # ─────────────────────────────────────────────────────────────
 # LABELS
 # ─────────────────────────────────────────────────────────────
+
 CLASS_NAMES = [
 
     "Charminar",
@@ -67,7 +101,7 @@ CLASS_NAMES = [
 
     "Sun Temple Konark",
 
-    "Taj Mahal",
+    "Taj Mahal"
 
 ]
 
@@ -76,38 +110,61 @@ print("STEP 3: Labels loaded")
 # ─────────────────────────────────────────────────────────────
 # PREDICTION
 # ─────────────────────────────────────────────────────────────
+
 def predict_monument(filepath):
 
-    print("STEP P1: Loading image", flush=True)
+    print(
+        "STEP P1: Loading image",
+        flush=True
+    )
 
     img = keras_image.load_img(
         filepath,
         target_size=(224,224)
     )
 
-    print("STEP P2: Converting image", flush=True)
+    print(
+        "STEP P2: Converting",
+        flush=True
+    )
 
-    arr = keras_image.img_to_array(img)
+    arr = keras_image.img_to_array(
+        img
+    )
 
-    print("STEP P3: Expanding dims", flush=True)
+    print(
+        "STEP P3: Expanding",
+        flush=True
+    )
 
     arr = np.expand_dims(
         arr,
         axis=0
     )
 
-    print("STEP P4: Preprocessing", flush=True)
-
-    arr = preprocess_input(arr)
-
-    print("STEP P5: Running inference", flush=True)
-
-    preds = _model.predict(
-        arr,
-        verbose=0
+    print(
+        "STEP P4: Preprocessing",
+        flush=True
     )
 
-    print("STEP P6: Inference complete", flush=True)
+    arr = preprocess_input(
+        arr
+    )
+
+    print(
+        "STEP P5: Running inference",
+        flush=True
+    )
+
+    preds = _model(
+        arr,
+        training=False
+    ).numpy()
+
+    print(
+        "STEP P6: Inference complete",
+        flush=True
+    )
 
     idx = int(
         np.argmax(preds)
@@ -127,21 +184,30 @@ def predict_monument(filepath):
     return monument,confidence
 
 # ─────────────────────────────────────────────────────────────
-# ROUTES
+# HOME
 # ─────────────────────────────────────────────────────────────
+
 @app.route("/")
 def home():
 
-    print("HOME PAGE OPENED", flush=True)
+    print(
+        "HOME PAGE OPENED",
+        flush=True
+    )
 
     return render_template(
         "index.html"
     )
 
+# ─────────────────────────────────────────────────────────────
+# PREDICT
+# ─────────────────────────────────────────────────────────────
+
 @app.route(
     "/predict",
     methods=["POST"]
 )
+
 def predict():
 
     print(
@@ -154,7 +220,7 @@ def predict():
         if "image" not in request.files:
 
             print(
-                "STEP 5 FAILED: no image",
+                "NO IMAGE",
                 flush=True
             )
 
@@ -170,12 +236,7 @@ def predict():
             flush=True
         )
 
-        if file.filename=="":
-
-            print(
-                "STEP 5 FAILED: empty filename",
-                flush=True
-            )
+        if file.filename == "":
 
             return render_template(
                 "index.html",
@@ -207,29 +268,30 @@ def predict():
         predict_monument(filepath)
 
         print(
-            "STEP 8: Prediction returned",
+            "STEP 8: Prediction done",
             flush=True
         )
 
-        db_path=os.path.join(
+        db_path = os.path.join(
             os.path.dirname(__file__),
             "monuments.db"
         )
 
         print(
-            "STEP 9: Opening DB",
+            "STEP 9: DB open",
             flush=True
         )
 
-        conn=sqlite3.connect(
+        conn = sqlite3.connect(
             db_path
         )
 
-        cursor=conn.cursor()
+        cursor = conn.cursor()
 
         cursor.execute(
         """
         SELECT
+
         history,
         dynasty,
         construction_period,
@@ -240,11 +302,12 @@ def predict():
         FROM monuments
 
         WHERE name=?
+
         """,
         (monument,)
         )
 
-        row=cursor.fetchone()
+        row = cursor.fetchone()
 
         conn.close()
 
@@ -253,20 +316,27 @@ def predict():
             flush=True
         )
 
-        NA="Information not available."
+        NA = "Information not available."
 
         history,\
         dynasty,\
         construction_period,\
         architecture,\
         unesco_status,\
-        tourism_facts=(
-        row if row else
+        tourism_facts = (
+
+        row
+
+        if row
+
+        else
+
         (NA,NA,NA,NA,NA,NA)
+
         )
 
         print(
-            "STEP 11: Rendering result",
+            "STEP 11: Rendering",
             flush=True
         )
 
@@ -306,13 +376,16 @@ def predict():
 # ─────────────────────────────────────────────────────────────
 # ENTRY
 # ─────────────────────────────────────────────────────────────
+
 if __name__=="__main__":
 
-    port=int(
+    port = int(
+
         os.environ.get(
             "PORT",
             5000
         )
+
     )
 
     app.run(
