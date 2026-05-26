@@ -3,13 +3,14 @@
 import os
 import sqlite3
 
-# TensorFlow environment limits
+# ─────────────────────────────────────────────────
+# TENSORFLOW ENV SETTINGS
+# ─────────────────────────────────────────────────
+
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
 os.environ["TF_NUM_INTEROP_THREADS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
-print("STEP 0: Importing TensorFlow...")
 
 import numpy as np
 import tensorflow as tf
@@ -20,13 +21,13 @@ from tensorflow.keras.applications.resnet50 import preprocess_input
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request
 
-print("STEP 0 COMPLETE: TensorFlow imported")
+# Reduce memory usage on Render
 
 tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
 
 # ─────────────────────────────────────────────────
-# APP
+# APP CONFIG
 # ─────────────────────────────────────────────────
 
 app = Flask(__name__)
@@ -40,13 +41,9 @@ os.makedirs(
     exist_ok=True
 )
 
-print("STEP 1: Upload folder ready")
-
 # ─────────────────────────────────────────────────
 # LOAD TFLITE MODEL
 # ─────────────────────────────────────────────────
-
-print("Loading TFLite model...")
 
 interpreter = tf.lite.Interpreter(
     model_path="model/heritage_model.tflite"
@@ -58,10 +55,8 @@ input_details = interpreter.get_input_details()
 
 output_details = interpreter.get_output_details()
 
-print("TFLite ready.")
-
 # ─────────────────────────────────────────────────
-# LABELS
+# CLASS LABELS
 # ─────────────────────────────────────────────────
 
 CLASS_NAMES = [
@@ -78,27 +73,15 @@ CLASS_NAMES = [
 
 ]
 
-print("STEP 3: Labels loaded")
-
 # ─────────────────────────────────────────────────
-# PREDICTION
+# MONUMENT PREDICTION
 # ─────────────────────────────────────────────────
 
 def predict_monument(filepath):
 
-    print(
-        "STEP P1: Loading image",
-        flush=True
-    )
-
     img = keras_image.load_img(
         filepath,
         target_size=(224,224)
-    )
-
-    print(
-        "STEP P2: Converting",
-        flush=True
     )
 
     arr = keras_image.img_to_array(
@@ -110,22 +93,12 @@ def predict_monument(filepath):
         axis=0
     )
 
-    print(
-        "STEP P3: Preprocessing",
-        flush=True
-    )
-
     arr = preprocess_input(
         arr
     )
 
     arr = arr.astype(
         np.float32
-    )
-
-    print(
-        "STEP P4: TFLite inference",
-        flush=True
     )
 
     interpreter.set_tensor(
@@ -144,11 +117,6 @@ def predict_monument(filepath):
 
     )
 
-    print(
-        "STEP P5: Inference complete",
-        flush=True
-    )
-
     idx = int(
         np.argmax(preds)
     )
@@ -159,12 +127,7 @@ def predict_monument(filepath):
 
     monument = CLASS_NAMES[idx]
 
-    print(
-        f"PREDICTED: {monument}",
-        flush=True
-    )
-
-    return monument,confidence
+    return monument, confidence
 
 
 # ─────────────────────────────────────────────────
@@ -190,17 +153,23 @@ def predict():
         if "image" not in request.files:
 
             return render_template(
+
                 "index.html",
+
                 error="No image uploaded."
+
             )
 
         file = request.files["image"]
 
-        if file.filename=="":
+        if file.filename == "":
 
             return render_template(
+
                 "index.html",
+
                 error="No image selected."
+
             )
 
         filename = secure_filename(
@@ -217,7 +186,7 @@ def predict():
 
         file.save(filepath)
 
-        monument,confidence = \
+        monument, confidence = \
         predict_monument(filepath)
 
         db_path = os.path.join(
@@ -247,7 +216,7 @@ def predict():
 
         FROM monuments
 
-        WHERE name=?
+        WHERE name = ?
 
         """,
         (monument,)
@@ -257,7 +226,7 @@ def predict():
 
         conn.close()
 
-        NA="Information not available."
+        NA = "Information not available."
 
         history,\
         dynasty,\
@@ -302,16 +271,11 @@ def predict():
 
     except Exception as e:
 
-        print(
-            str(e),
-            flush=True
-        )
-
         return str(e),500
 
 
 # ─────────────────────────────────────────────────
-# ENTRY
+# LOCAL ENTRY
 # ─────────────────────────────────────────────────
 
 if __name__=="__main__":
