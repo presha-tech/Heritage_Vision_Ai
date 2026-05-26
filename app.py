@@ -60,15 +60,19 @@ print("STEP 1: Upload folder ready")
 # ─────────────────────────────────────────────────────────────
 # MODEL
 # ─────────────────────────────────────────────────────────────
+print("Loading TFLite model...")
 
-MODEL_PATH = "model/best_resnet_model.h5"
+interpreter = tf.lite.Interpreter(
+    model_path="model/heritage_model.tflite"
+)
 
-print("STEP 2: Loading model...")
+interpreter.allocate_tensors()
 
-_model = load_model(MODEL_PATH)
+input_details = interpreter.get_input_details()
 
-print("STEP 2 COMPLETE: Model loaded")
+output_details = interpreter.get_output_details()
 
+print("TFLite ready.")
 # ─────────────────────────────────────────────────────────────
 # LABELS
 # ─────────────────────────────────────────────────────────────

@@ -1,28 +1,43 @@
 # predict.py
 
 import numpy as np
-from tensorflow.keras.models import load_model
+import tensorflow as tf
+
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.resnet50 import preprocess_input
+
 import sys
-import os
 
 # =========================
-# LOAD MODEL
+# LOAD TFLITE MODEL
 # =========================
 
-model = load_model("model/best_resnet_model.h5")
+interpreter = tf.lite.Interpreter(
+    model_path="model/heritage_model.tflite"
+)
+
+interpreter.allocate_tensors()
+
+input_details = interpreter.get_input_details()
+
+output_details = interpreter.get_output_details()
 
 # =========================
 # CLASS LABELS
 # =========================
 
 class_names = [
+
     "Charminar",
+
     "Gateway of India",
+
     "Qutub Minar",
+
     "Sun Temple Konark",
+
     "Taj Mahal"
+
 ]
 
 # =========================
@@ -32,30 +47,91 @@ class_names = [
 img_path = sys.argv[1]
 
 # =========================
-# LOAD AND PREPROCESS IMAGE
+# LOAD IMAGE
 # =========================
 
-img = image.load_img(img_path, target_size=(224, 224))
+img = image.load_img(
 
-img_array = image.img_to_array(img)
+    img_path,
 
-img_array = np.expand_dims(img_array, axis=0)
+    target_size=(224,224)
 
-img_array = preprocess_input(img_array)
+)
+
+img_array = image.img_to_array(
+
+    img
+
+)
+
+img_array = np.expand_dims(
+
+    img_array,
+
+    axis=0
+
+)
+
+img_array = preprocess_input(
+
+    img_array
+
+)
+
+img_array = img_array.astype(
+
+    np.float32
+
+)
 
 # =========================
-# PREDICT
+# RUN TFLITE INFERENCE
 # =========================
 
-predictions = model.predict(img_array, verbose=0)
-predicted_index = np.argmax(predictions)
+interpreter.set_tensor(
 
-confidence = float(np.max(predictions)) * 100
+    input_details[0]["index"],
 
-predicted_class = class_names[predicted_index]
+    img_array
+
+)
+
+interpreter.invoke()
+
+predictions = interpreter.get_tensor(
+
+    output_details[0]["index"]
+
+)
+
+# =========================
+# GET RESULT
+# =========================
+
+predicted_index = int(
+
+    np.argmax(predictions)
+
+)
+
+confidence = float(
+
+    np.max(predictions)
+
+) * 100
+
+predicted_class = class_names[
+
+    predicted_index
+
+]
 
 # =========================
 # OUTPUT
 # =========================
 
-print(f"{predicted_class}|{confidence:.2f}")
+print(
+
+f"{predicted_class}|{confidence:.2f}"
+
+)
