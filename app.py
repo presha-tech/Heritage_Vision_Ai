@@ -2,133 +2,325 @@
 
 import os
 import sqlite3
-import urllib.request
 
 # ─────────────────────────────────────────────────────────────
-# TENSORFLOW — import at module level so Gunicorn loads it
-# during the boot phase (before any request timeout clock starts).
-# Importing inside the request handler causes a WORKER TIMEOUT.
+# TENSORFLOW
 # ─────────────────────────────────────────────────────────────
-print("Importing TensorFlow (this takes ~20s on CPU)...")
+print("STEP 0: Importing TensorFlow...")
+
 import numpy as np
+import tensorflow as tf
+
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.applications.resnet50 import preprocess_input
-from werkzeug.utils import secure_filename
-print("TensorFlow imported successfully.")
 
+from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request
 
+print("STEP 0 COMPLETE: TensorFlow imported")
+
+# Reduce memory pressure a bit
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
+
+# ─────────────────────────────────────────────────────────────
+# APP
+# ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
 # ─────────────────────────────────────────────────────────────
-# UPLOAD FOLDER
+# UPLOADS
 # ─────────────────────────────────────────────────────────────
 UPLOAD_FOLDER = "static/uploads"
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+os.makedirs(
+    UPLOAD_FOLDER,
+    exist_ok=True
+)
+
+print("STEP 1: Upload folder ready")
 
 # ─────────────────────────────────────────────────────────────
-# MODEL DOWNLOAD  (runs once at startup, not per-request)
+# MODEL
 # ─────────────────────────────────────────────────────────────
 MODEL_PATH = "model/best_resnet_model.h5"
 
-# ─────────────────────────────────────────────────────────────
-# LOAD MODEL  (also at startup — not inside a request handler)
-# ─────────────────────────────────────────────────────────────
-print("Loading model weights...")
+print("STEP 2: Loading model...")
+
 _model = load_model(MODEL_PATH)
-print("Model ready.")
+
+print("STEP 2 COMPLETE: Model loaded")
 
 # ─────────────────────────────────────────────────────────────
-# CLASS LABELS
+# LABELS
 # ─────────────────────────────────────────────────────────────
 CLASS_NAMES = [
+
     "Charminar",
+
     "Gateway of India",
+
     "Qutub Minar",
+
     "Sun Temple Konark",
+
     "Taj Mahal",
+
 ]
 
+print("STEP 3: Labels loaded")
+
 # ─────────────────────────────────────────────────────────────
-# PREDICTION  (fast — model already loaded)
+# PREDICTION
 # ─────────────────────────────────────────────────────────────
 def predict_monument(filepath):
-    img        = keras_image.load_img(filepath, target_size=(224, 224))
-    arr        = keras_image.img_to_array(img)
-    arr        = preprocess_input(arr[None, ...])
-    preds      = _model.predict(arr, verbose=0)
-    idx        = int(preds.argmax())
-    confidence = float(preds.max()) * 100
-    return CLASS_NAMES[idx], confidence
 
+    print("STEP P1: Loading image", flush=True)
+
+    img = keras_image.load_img(
+        filepath,
+        target_size=(224,224)
+    )
+
+    print("STEP P2: Converting image", flush=True)
+
+    arr = keras_image.img_to_array(img)
+
+    print("STEP P3: Expanding dims", flush=True)
+
+    arr = np.expand_dims(
+        arr,
+        axis=0
+    )
+
+    print("STEP P4: Preprocessing", flush=True)
+
+    arr = preprocess_input(arr)
+
+    print("STEP P5: Running inference", flush=True)
+
+    preds = _model.predict(
+        arr,
+        verbose=0
+    )
+
+    print("STEP P6: Inference complete", flush=True)
+
+    idx = int(
+        np.argmax(preds)
+    )
+
+    confidence = float(
+        np.max(preds)
+    ) * 100
+
+    monument = CLASS_NAMES[idx]
+
+    print(
+        f"STEP P7: {monument} {confidence:.2f}",
+        flush=True
+    )
+
+    return monument,confidence
 
 # ─────────────────────────────────────────────────────────────
 # ROUTES
 # ─────────────────────────────────────────────────────────────
 @app.route("/")
 def home():
-    return render_template("index.html")
 
+    print("HOME PAGE OPENED", flush=True)
 
-@app.route("/predict", methods=["POST"])
+    return render_template(
+        "index.html"
+    )
+
+@app.route(
+    "/predict",
+    methods=["POST"]
+)
 def predict():
+
+    print(
+        "STEP 4: Predict route entered",
+        flush=True
+    )
+
     try:
+
         if "image" not in request.files:
-            return render_template("index.html", error="No image uploaded.")
+
+            print(
+                "STEP 5 FAILED: no image",
+                flush=True
+            )
+
+            return render_template(
+                "index.html",
+                error="No image uploaded."
+            )
 
         file = request.files["image"]
-        if file.filename == "":
-            return render_template("index.html", error="No image selected.")
 
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        print(
+            "STEP 5: Image received",
+            flush=True
+        )
+
+        if file.filename=="":
+
+            print(
+                "STEP 5 FAILED: empty filename",
+                flush=True
+            )
+
+            return render_template(
+                "index.html",
+                error="No image selected."
+            )
+
+        filename = secure_filename(
+            file.filename
+        )
+
+        filepath = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            filename
+        )
+
+        print(
+            f"STEP 6: Saving {filepath}",
+            flush=True
+        )
+
         file.save(filepath)
 
-        monument, confidence = predict_monument(filepath)
-
-        # Fetch monument info from DB
-        db_path = os.path.join(os.path.dirname(__file__), "monuments.db")
-        conn    = sqlite3.connect(db_path)
-        cursor  = conn.cursor()
-        cursor.execute(
-            """
-            SELECT history, dynasty, construction_period,
-                   architecture, unesco_status, tourism_facts
-            FROM monuments
-            WHERE name = ?
-            """,
-            (monument,),
+        print(
+            "STEP 7: File saved",
+            flush=True
         )
-        row = cursor.fetchone()
+
+        monument,confidence = \
+        predict_monument(filepath)
+
+        print(
+            "STEP 8: Prediction returned",
+            flush=True
+        )
+
+        db_path=os.path.join(
+            os.path.dirname(__file__),
+            "monuments.db"
+        )
+
+        print(
+            "STEP 9: Opening DB",
+            flush=True
+        )
+
+        conn=sqlite3.connect(
+            db_path
+        )
+
+        cursor=conn.cursor()
+
+        cursor.execute(
+        """
+        SELECT
+        history,
+        dynasty,
+        construction_period,
+        architecture,
+        unesco_status,
+        tourism_facts
+
+        FROM monuments
+
+        WHERE name=?
+        """,
+        (monument,)
+        )
+
+        row=cursor.fetchone()
+
         conn.close()
 
-        NA = "Information not available."
-        history, dynasty, construction_period, architecture, unesco_status, tourism_facts = (
-            row if row else (NA, NA, NA, NA, NA, NA)
+        print(
+            "STEP 10: DB fetched",
+            flush=True
+        )
+
+        NA="Information not available."
+
+        history,\
+        dynasty,\
+        construction_period,\
+        architecture,\
+        unesco_status,\
+        tourism_facts=(
+        row if row else
+        (NA,NA,NA,NA,NA,NA)
+        )
+
+        print(
+            "STEP 11: Rendering result",
+            flush=True
         )
 
         return render_template(
+
             "result.html",
+
             monument=monument,
+
             confidence=f"{confidence:.2f}",
+
             image_path=filepath,
+
             history=history,
+
             dynasty=dynasty,
+
             construction_period=construction_period,
+
             architecture=architecture,
+
             unesco_status=unesco_status,
-            tourism_facts=tourism_facts,
+
+            tourism_facts=tourism_facts
+
         )
 
     except Exception as e:
-        return f"ERROR: {str(e)}", 500
 
+        print(
+            f"ERROR: {str(e)}",
+            flush=True
+        )
+
+        return str(e),500
 
 # ─────────────────────────────────────────────────────────────
-# LOCAL DEV ENTRY POINT
+# ENTRY
 # ─────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+if __name__=="__main__":
+
+    port=int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
+
+    app.run(
+
+        host="0.0.0.0",
+
+        port=port,
+
+        debug=False
+
+    )
